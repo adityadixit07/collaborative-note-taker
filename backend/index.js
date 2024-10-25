@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { ConnectDB } from "./config/dbConnect.js";
-import { login, register } from "./controllers/auth.js";
+import { login, register } from "./controllers/authController.js";
 const app = express();
 
 app.use(express.json());
