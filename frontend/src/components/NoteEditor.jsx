@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Search,
   Menu,
@@ -20,6 +20,7 @@ import {
   Code,
 } from "lucide-react";
 import logo from "../assets/images/logo.webp";
+import { getNotes } from "../services/api/notes";
 
 const NoteTakingApp = () => {
   const [darkMode, setDarkMode] = useState(false);
@@ -52,6 +53,15 @@ const NoteTakingApp = () => {
   ];
 
   const baseClasses = darkMode ? "bg-gray-900 text-white" : "bg-gray-50";
+
+  useEffect(() => {
+    document.title = "CollabNote";
+    const getAllNotes = async () => {
+      const res = await getNotes();
+      console.log(res);
+    };
+    getAllNotes();
+  }, []);
 
   return (
     <div className={`min-h-screen ${baseClasses}`}>

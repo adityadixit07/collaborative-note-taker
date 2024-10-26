@@ -1,7 +1,10 @@
 import express from "express";
 import cors from "cors";
 import { ConnectDB } from "./config/dbConnect.js";
-import { login, register } from "./controllers/authController.js";
+import router from "./routes/Notes.js";
+import authenticateUser from "./middleware/authMiddleware.js";
+import userRoutes from "./routes/User.js";
+import morgan from "morgan";
 const app = express();
 
 app.use(express.json());
@@ -12,13 +15,14 @@ app.use(
     credentials: true,
   })
 );
+app.use(morgan("dev"));
 
 // db connect
 ConnectDB();
 
 // routes
-app.post("/register", register);
-app.post("/login", login);
+app.use("/user", userRoutes);
+app.use("/notes", authenticateUser, router);
 
 app.listen(4000, () => {
   console.log("Server is running on port 4000");

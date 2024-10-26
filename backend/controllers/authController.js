@@ -25,6 +25,8 @@ export const register = async (req, res, next) => {
     res.cookie("token", token, {
       httpOnly: true,
       expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
     });
 
     const user = await User.create({
@@ -34,10 +36,18 @@ export const register = async (req, res, next) => {
     });
     res.status(201).json({
       success: true,
-      data: user,
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+      },
+      token,
     });
   } catch (error) {
-    next(error);
+    res.status(500).json({
+      success: false,
+      error: "Server error",
+    });
   }
 };
 
@@ -48,7 +58,7 @@ export const login = async (req, res, next) => {
     if (!isUserExist) {
       return res.status(400).json({
         success: false,
-        error: "Invalid Credentials",
+        error: "User does not exist",
       });
     }
     const isPasswordMatch = await bcrypt.compare(
@@ -67,13 +77,21 @@ export const login = async (req, res, next) => {
     res.cookie("token", token, {
       httpOnly: true,
       expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
     });
     res.status(200).json({
       success: true,
-      data: isUserExist,
+      data: {
+        id: isUserExist._id,
+        name: isUserExist.name,
+        email: isUserExist.email,
+      },
       token,
     });
   } catch (error) {
     next(error);
   }
 };
+
+// user account deleted then all refrences should be deleted from everywhere

@@ -1,73 +1,62 @@
-class NoteWebSocketHandler {
-  constructor(io) {
-    this.io = io;
-    this.activeUsers = new Map(); // noteId -> Set of active users
+import Note from "../models/Note.js";
+export class NotesController {
+  async createNote(req, res, next) {
+    try {
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ message: "User id is required" });
+      }
+      const newNote = await Note.create(req.body);
+      newNote.owner = userId;
+    } catch (error) {
+      return res.status(500).json({ message: error.message });
+    }
   }
-
-  handleConnection(socket) {
-    const userId = socket.user.id; // Assuming auth middleware sets this
-
-    socket.on("note:join", async (noteId) => {
-      // Join the note's room
-      socket.join(`note:${noteId}`);
-
-      // Track active users
-      if (!this.activeUsers.has(noteId)) {
-        this.activeUsers.set(noteId, new Set());
+  async getNotes(req, res, next) {
+    try {
+      const notes = await Note.find();
+      return res.status(200).json(notes);
+    } catch (error) {
+      return res.status(500).json({ message: error.message });
+    }
+  }
+  async getNoteById(req, res, next) {
+    try {
+      const { id } = req.params;
+      const note = await Note.findById(id);
+      if (!note) {
+        return res.status(404).json({ message: "Note not found" });
       }
-      this.activeUsers.get(noteId).add(userId);
-
-      // Broadcast user joined to others
-      socket.to(`note:${noteId}`).emit("user:joined", {
-        userId,
-        username: socket.user.username,
+      return res.status(200).json(note);
+    } catch (error) {
+      return res.status(500).json({ message: error.message });
+    }
+  }
+  async updateNote(req, res, next) {
+    try {
+      const { id } = req.params;
+      const note = await Note.findByIdAndUpdate(id, req.body, {
+        new: true,
+        runValidators: true,
       });
-
-      // Send current active users to the joining user
-      socket.emit("active:users", Array.from(this.activeUsers.get(noteId)));
-    });
-
-    socket.on("note:update", async (data) => {
-      try {
-        const { noteId, content, cursorPosition } = data;
-
-        // Save the update
-        const noteService = new NoteService();
-        await noteService.updateNoteContent(
-          noteId,
-          userId,
-          content,
-          cursorPosition
-        );
-
-        // Broadcast to others in real-time
-        socket.to(`note:${noteId}`).emit("note:updated", {
-          content,
-          userId,
-          cursorPosition,
-        });
-      } catch (error) {
-        socket.emit("error", error.message);
+      if (!note) {
+        return res.status(404).json({ message: "Note not found" });
       }
-    });
-
-    socket.on("cursor:move", (data) => {
-      const { noteId, position } = data;
-      socket.to(`note:${noteId}`).emit("cursor:moved", {
-        userId,
-        username: socket.user.username,
-        position,
-      });
-    });
-
-    socket.on("disconnect", () => {
-      // Remove user from active users and notify others
-      for (const [noteId, users] of this.activeUsers.entries()) {
-        if (users.has(userId)) {
-          users.delete(userId);
-          socket.to(`note:${noteId}`).emit("user:left", { userId });
-        }
+      return res.status(200).json(note);
+    } catch (error) {
+      return res.status(500).json({ message: error.message });
+    }
+  }
+  async deleteNote(req, res, next) {
+    try {
+      const { id } = req.params;
+      const note = await Note.findByIdAndDelete(id);
+      if (!note) {
+        return res.status(404).json({ message: "Note not found" });
       }
-    });
+      return res.status(200).json({ message: "Note deleted" });
+    } catch (error) {
+      return res.status(500).json({ message: error.message });
+    }
   }
 }
